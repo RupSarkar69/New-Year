@@ -2,6 +2,15 @@ import { gsap } from "gsap";
 import { useCallback, useEffect, useRef, useState } from "react";
 import "./Gallery.css";
 
+const PHOTOS = [
+  { src: "/images/pic1.jpg", alt: "Memory 1" },
+  { src: "/images/pic2.jpg", alt: "Memory 2" },
+  { src: "/images/pic3.jpg", alt: "Memory 3" },
+  { src: "/images/pic4.jpg", alt: "Memory 4" },
+  { src: "/images/pic5.jpeg", alt: "Memory 5" },
+  { src: "/images/pic6.jpg", alt: "Memory 6" },
+];
+
 function Gallery({ isActive }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -9,15 +18,6 @@ function Gallery({ isActive }) {
 
   const photosRef = useRef([]);
   const lightboxImgRef = useRef(null);
-
-  const photos = [
-    { src: "/images/pic1.jpg", alt: "Memory 1" },
-    { src: "/images/pic2.jpg", alt: "Memory 2" },
-    { src: "/images/pic3.jpg", alt: "Memory 3" },
-    { src: "/images/pic4.jpg", alt: "Memory 4" },
-    { src: "/images/pic5.jpeg", alt: "Memory 5" },
-    { src: "/images/pic6.jpg", alt: "Memory 6" },
-  ];
 
   // Reveal photos with GSAP when page becomes active
   useEffect(() => {
@@ -76,10 +76,7 @@ function Gallery({ isActive }) {
     };
   }, [lightboxOpen]);
 
-  const showNext = useCallback(() => {
-    const newIndex = (currentIndex + 1) % photos.length;
-
-    // Animate transition
+  const showNext = () => {
     if (lightboxImgRef.current) {
       gsap.to(lightboxImgRef.current, {
         x: -100,
@@ -87,21 +84,27 @@ function Gallery({ isActive }) {
         duration: 0.2,
         ease: "power2.in",
         onComplete: () => {
-          setCurrentIndex(newIndex);
-          gsap.fromTo(
-            lightboxImgRef.current,
-            { x: 100, opacity: 0 },
-            { x: 0, opacity: 1, duration: 0.3, ease: "power2.out" }
-          );
+          setCurrentIndex((prev) => {
+            const newIndex = (prev + 1) % PHOTOS.length;
+            requestAnimationFrame(() => {
+              if (lightboxImgRef.current) {
+                gsap.fromTo(
+                  lightboxImgRef.current,
+                  { x: 100, opacity: 0 },
+                  { x: 0, opacity: 1, duration: 0.3, ease: "power2.out" }
+                );
+              }
+            });
+            return newIndex;
+          });
         },
       });
+    } else {
+      setCurrentIndex((prev) => (prev + 1) % PHOTOS.length);
     }
-  }, [currentIndex, photos.length]);
+  };
 
-  const showPrev = useCallback(() => {
-    const newIndex = (currentIndex - 1 + photos.length) % photos.length;
-
-    // Animate transition
+  const showPrev = () => {
     if (lightboxImgRef.current) {
       gsap.to(lightboxImgRef.current, {
         x: 100,
@@ -109,16 +112,33 @@ function Gallery({ isActive }) {
         duration: 0.2,
         ease: "power2.in",
         onComplete: () => {
-          setCurrentIndex(newIndex);
-          gsap.fromTo(
-            lightboxImgRef.current,
-            { x: -100, opacity: 0 },
-            { x: 0, opacity: 1, duration: 0.3, ease: "power2.out" }
-          );
+          setCurrentIndex((prev) => {
+            const newIndex = (prev - 1 + PHOTOS.length) % PHOTOS.length;
+            requestAnimationFrame(() => {
+              if (lightboxImgRef.current) {
+                gsap.fromTo(
+                  lightboxImgRef.current,
+                  { x: -100, opacity: 0 },
+                  { x: 0, opacity: 1, duration: 0.3, ease: "power2.out" }
+                );
+              }
+            });
+            return newIndex;
+          });
         },
       });
+    } else {
+      setCurrentIndex((prev) => (prev - 1 + PHOTOS.length) % PHOTOS.length);
     }
-  }, [currentIndex, photos.length]);
+  };
+
+  const showNextRef = useRef(null);
+  const showPrevRef = useRef(null);
+
+  useEffect(() => {
+    showNextRef.current = showNext;
+    showPrevRef.current = showPrev;
+  });
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -127,21 +147,21 @@ function Gallery({ isActive }) {
       if (e.key === "Escape") {
         closeLightbox();
       } else if (e.key === "ArrowLeft") {
-        showPrev();
+        if (showPrevRef.current) showPrevRef.current();
       } else if (e.key === "ArrowRight") {
-        showNext();
+        if (showNextRef.current) showNextRef.current();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [lightboxOpen, showNext, showPrev, closeLightbox]);
+  }, [lightboxOpen, closeLightbox]);
 
   return (
     <section className="gallery">
       <h2>📸 Some Beautiful Quotes</h2>
       <div className="photos">
-        {photos.map((photo, index) => (
+        {PHOTOS.map((photo, index) => (
           <img
             key={index}
             ref={(el) => (photosRef.current[index] = el)}
@@ -157,8 +177,8 @@ function Gallery({ isActive }) {
         <div className="lightbox" onClick={closeLightbox}>
           <img
             ref={lightboxImgRef}
-            src={photos[currentIndex].src}
-            alt={photos[currentIndex].alt}
+            src={PHOTOS[currentIndex].src}
+            alt={PHOTOS[currentIndex].alt}
             onClick={(e) => e.stopPropagation()}
           />
           <button
